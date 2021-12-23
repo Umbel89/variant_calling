@@ -27,7 +27,7 @@ import time, datetime, logging, subprocess
 from subprocess import check_call
 
 
-def init (sample_list, reference_fasta, output_dir, projectname, threads, input_intervals, all_sites):
+def init (sample_list, reference_fasta, output_dir, projectname, threads, input_intervals, all_sites, memory):
     
     start = time.time()
     #create log file
@@ -47,7 +47,7 @@ def init (sample_list, reference_fasta, output_dir, projectname, threads, input_
     
     print ("Joint Genotyping")
     genotyping_start = time.time()
-    database = run_dbimport (intervals_fn, sample_list, output_dir, threads,  input_intervals)
+    database = run_dbimport (intervals_fn, sample_list, output_dir, threads,  input_intervals, memory)
     database_time = time.time()
     output_vcf = run_genotype (database, sample_list, reference_fasta, output_dir, projectname, all_sites, intervals_fn)
     genotyping_end = time.time()
@@ -87,7 +87,7 @@ def index_gvcf (input_gvcf):
 def create_intervals (reference_fasta, output_dir):
     
     ref_fai = reference_fasta+'.fai'
-    intervals_fn = f'/{output_dir}/reference/intervals.list'
+    intervals_fn = f'{output_dir}/reference/intervals.list'
     
     with open (intervals_fn, 'w') as output_fn:
         with open (ref_fai) as the_file:
@@ -98,7 +98,7 @@ def create_intervals (reference_fasta, output_dir):
     return intervals_fn
 
 
-def run_dbimport (intervals_fn, sample_list, output_dir, threads, input_intervals):
+def run_dbimport (intervals_fn, sample_list, output_dir, threads, input_intervals, memory):
     
     workspace_dir = f'{output_dir}/variants/db_workspace'
     db_input = ''
@@ -128,7 +128,7 @@ def run_dbimport (intervals_fn, sample_list, output_dir, threads, input_interval
     else:
         print ("Creating database of the gvcf files.")
         
-        cmd = f'gatk --java-options "-Xmx32g -Xms8g -Djava.io.tmpdir={output_dir}/variants/" GenomicsDBImport {db_input} \
+        cmd = f'gatk --java-options "-Xmx{memory}g -Xms8g -Djava.io.tmpdir={output_dir}/variants/" GenomicsDBImport {db_input} \
                 -L {intervals_fn} --tmp-dir {output_dir}/variants/ \
                 --genomicsdb-workspace-path {workspace_dir} --batch-size 70 \
                 --seconds-between-progress-updates 120 --reader-threads {threads} {merge_intervals}'
@@ -143,7 +143,7 @@ def run_genotype (database, sample_list, reference_fasta, output_dir, projectnam
     
     #output vcf with all the reference sites
     if all_sites:
-        vcf_type = '--all-sites --annotate-with-num-discovered-alleles'
+        vcf_type = '--all-sites --annotate-with-num-discovered-alleles -stand-call-conf 0'
     else:
         vcf_type = ''
     
@@ -151,7 +151,7 @@ def run_genotype (database, sample_list, reference_fasta, output_dir, projectnam
         print (f"Joint genotyping")
         cmd = f'gatk --java-options "-Xmx32g -Djava.io.tmpdir={output_dir}/variants/" GenotypeGVCFs -V gendb://{database} \
                 -R {reference_fasta} -O {output_vcf} --tmp-dir {output_dir}/variants/ -L {intervals_fn}\
-                -G StandardAnnotation --seconds-between-progress-updates 120 -stand-call-conf 0 {vcf_type}'
+                -G StandardAnnotation --seconds-between-progress-updates 120 {vcf_type}'
         check_call(cmd, shell=True)
     else:
         print (f"vcf file for project {projectname} already exists.")

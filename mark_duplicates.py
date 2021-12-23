@@ -23,39 +23,64 @@
 #  
 
 import glob, os, sys
+import numpy as np
 from subprocess import check_call
+from multiprocessing import Process
 
 
-def init (sample_list, output_dir, threads):
+def init (sample_list, sample_dict, output_dir, threads, parallelise):
+    
+    #make list into an array
+    sample_array = np.array (sample_list)
+    split_dict = {}
+    #split sample list into multiple (number=parallelise) sublists and run them in parallel
+    for i, sample_subarray in enumerate(np.array_split(sample_array, int(parallelise/2))):
+        sample_sublist = list (sample_subarray)
+        #run process in parallel
+        split_dict[f'filter_pr{i}'] = Process(target=filter_bam, args=(sample_sublist, sample_dict, output_dir, threads))
+        split_dict[f'filter_pr{i}'].start()
+    #join processes when they are finished
+    for split_pr in split_dict.keys():
+        split_dict[split_pr].join()
+
+
+def filter_bam (sample_list, sample_dict, output_dir, threads):
     
     for sample in sample_list:
-        input_bam = glob.glob(f'{output_dir}/mapped/{sample}_*.bam')
+        #create a list with all the bam files per sample
+        input_list = []
+        subsample_list = sample_dict[sample]
+        for subsample in subsample_list:
+            sample_join = ''.join([sample, subsample[:-1]])
+            input_bam = f'{output_dir}/mapped/{sample_join}.bam'
+        input_list.append(input_bam)
         #mark duplicates
-        filtered_bam = mark_duplicates (sample, input_bam, output_dir)
+        filtered_bam = mark_duplicates (sample, input_list, output_dir)
         #bam stats
         samtools_stats (sample, filtered_bam, output_dir, threads)
 
 
-def mark_duplicates (sample, input_bam, output_dir):
+def mark_duplicates (sample, input_list, output_dir):
     
     filtered_bam = f'{output_dir}/mapped_filtered/{sample}.filtered.bam'
     
     #for multiple bam files per sample, build input command
     input_cmd = ''
-    for bam_file in input_bam:
+    for bam_file in input_list:
         input_cmd += f' -I {bam_file}'
     
     if os.path.isfile(filtered_bam):
         print (f"Filtered bam file of sample {sample} already exists.")
     else:
         print (f"Running mark duplicates for sample {sample}.")
-        cmd = f'gatk MarkDuplicates{input_cmd} -O {filtered_bam} -M {filtered_bam}-metrics.txt \
+        # ~ cmd = f'gatk MergeSamFiles{input_cmd} -O {filtered_bam} -AS'
+        cmd = f'gatk MarkDuplicates{input_cmd} -O {filtered_bam} -M {filtered_bam}-metrics.txt -AS\
                 --REMOVE_DUPLICATES true --VERBOSITY ERROR --CREATE_INDEX true --TMP_DIR {output_dir}'
         check_call(cmd, shell=True)
     
-    # ~ if not os.path.isfile(filtered_bam+'.bai'):
-        # ~ cmd = f'{samtools} index -@ 4 -b {filtered_bam}'
-        # ~ check_call(cmd, shell=True)
+    if not os.path.isfile(filtered_bam+'.bai'):
+        cmd = f'samtools index -@ 4 -b {filtered_bam}'
+        check_call(cmd, shell=True)
         
     return filtered_bam
 

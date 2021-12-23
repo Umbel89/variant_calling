@@ -80,7 +80,7 @@ def run_haplotypecaller (input_bam, sample, reference_fasta, output_dir, input_t
     else:
         output_mode = 'EMIT_VARIANTS_ONLY'
     
-    if input_intervals == 'all':
+    if not input_intervals:
         intervals = ''
     else:
         intervals = f'-L {input_intervals}'

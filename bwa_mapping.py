@@ -29,7 +29,7 @@ from subprocess import check_call, Popen, PIPE, STDOUT
 start = time.time()
 
 
-def init (sample_dict, reads_dir, output_dir, reference_fasta, threads, projectname, genotyping):
+def init (sample_dict, reads_dir, output_dir, reference_fasta, threads, projectname, genotyping, readfn):
     
     #create log file
     log_fn = f'{output_dir}/logs/{projectname}_bwa-mapping.log'
@@ -40,7 +40,7 @@ def init (sample_dict, reads_dir, output_dir, reference_fasta, threads, projectn
     index_fasta(reference_fasta)
     
     #return pairs
-    for sample, subsample, R1, R2 in return_pairs (sample_dict, reads_dir):
+    for sample, subsample, R1, R2 in return_pairs (sample_dict, reads_dir, readfn):
         sample_start = time.time()
         #create read groups for bam files
         read_group = find_read_group (R1, sample, subsample, genotyping, projectname)
@@ -54,33 +54,31 @@ def init (sample_dict, reads_dir, output_dir, reference_fasta, threads, projectn
     logging.info (f'Total Time: {end}')
 
 
-def return_pairs (sample_dict, reads_dir):
+def return_pairs (sample_dict, reads_dir, readfn):
     
     for sample, subsample_list in sample_dict.items():
         sample_dir = reads_dir+sample
         for subsample in subsample_list:
-            sample_join = '_'.join([sample, subsample])
-            R1 = f'{reads_dir}/{sample}/{sample_join}_R1_filtered_rmMin30G.fastq.gz'
-            R2 = f'{reads_dir}/{sample}/{sample_join}_R2_filtered_rmMin30G.fastq.gz'
+            sample_join = ''.join([sample, subsample])
+            R1 = f'{reads_dir}/{sample}/{sample_join}R1{readfn}'
+            R2 = f'{reads_dir}/{sample}/{sample_join}R2{readfn}'
             yield sample, subsample, R1, R2
 
 
 def find_read_group (R1, sample, subsample, genotyping, projectname):
     
-    if subsample:
-        group_id = subsample
-    else:
-        cmd = f'zcat {R1} | head -n 1'
-        
-        result = Popen(cmd, stdout=PIPE, shell=True, stderr=STDOUT)
-        fasta_header = result.communicate()[0].strip()[1:].decode('UTF-8')
-        #remove any tabs or spaces
-        fasta_header = ''.join(fasta_header.split())
-        
-        read_id = '.'.join(fasta_header.split(':')[:2])
-        flowcell = '.'.join(fasta_header.split(':')[2:4])
-        group_id = read_id+flowcell
-        
+    #parse read ID and flowcell from fastq file
+    cmd = f'zcat {R1} | head -n 1'
+    
+    result = Popen(cmd, stdout=PIPE, shell=True, stderr=STDOUT)
+    fasta_header = result.communicate()[0].strip()[1:].decode('UTF-8')
+    #remove any tabs or spaces
+    fasta_header = ''.join(fasta_header.split())
+    
+    read_id = '.'.join(fasta_header.split(':')[:2])
+    flowcell = '.'.join(fasta_header.split(':')[2:4])
+    group_id = read_id+flowcell
+    
     #create read groups for the gvcf or the individual mode, read group strings need to be connected with \\t and not \t otherwise gatk will return an error
     if genotyping == 'joint':
         read_group = f'@RG\\tID:{group_id}\\tSM:{sample}\\tLB:{projectname}\\tPL:ILLUMINA'
@@ -93,9 +91,9 @@ def find_read_group (R1, sample, subsample, genotyping, projectname):
 def index_fasta (reference_fasta):
     
     #index reference
-    if not os.path.isfile(reference_fasta+'.bwt') or not os.path.getsize(reference_fasta+'.bwt') > 0:
+    if not os.path.isfile(reference_fasta+'.pac') or not os.path.getsize(reference_fasta+'.pac') > 0:
         print ("Indexing reference with bwa.")
-        cmd = f'bwa index {reference_fasta}' 
+        cmd = f'bwa-mem2 index {reference_fasta}' 
         check_call(cmd, shell=True)
         
         index_time = datetime.timedelta(seconds=round(time.time() - start))
@@ -108,14 +106,14 @@ def index_fasta (reference_fasta):
 
 def run_bwa (read_group, reference_fasta, R1, R2, sample, subsample, output_dir, threads):
     
-    output_name = '_'.join([sample, subsample])
+    output_name = ''.join([sample, subsample[:-1]])
     output_fn = f'{output_dir}/mapped/{output_name}.bam'
     
     if not os.path.isfile(output_fn) or not os.path.getsize(output_fn) > 0:
         #map with bwa and convert to bam and sort with samtools
         print (f"Mapping with bwa mem for sample {sample}.")
-        cmd = f'bwa mem -M -R "{read_group}" -t {threads} {reference_fasta} {R1} {R2} \
-                | samtools sort -@ {threads} -m 1G - -o {output_fn}'
+        cmd = f'bwa-mem2 mem -M -R "{read_group}" -t {threads} {reference_fasta} {R1} {R2} \
+                | samtools sort -@ {threads} -m 4G - -o {output_fn}'
         check_call(cmd, shell=True)
     else:
         print (f"bam file of sample {sample} already exists.")
