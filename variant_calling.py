@@ -91,7 +91,7 @@ def check_sample_input (reads_dir, input_samples, reads_fn, output_dir, projectn
             sample_dir = os.path.realpath(sample_info[0])
             sample_name = sample_dir.split('/')[-1]
             if sample_name in sample_list:
-                #find upload file in the sample directory
+                #find read files in the sample directory
                 sample_reads = [fn for fn in sample_info[2] if fn.endswith(reads_fn)]
                 #if there are no sample read files, print error and exit
                 if not sample_reads:
@@ -102,11 +102,12 @@ def check_sample_input (reads_dir, input_samples, reads_fn, output_dir, projectn
                     #check if input is file
                     for sample_fn in sample_reads:
                         os.path.isfile (os.path.join(sample_dir,sample_fn))
-                    #parse names and add in a dictionary
+                    #parse subsample names and add in a dictionary
                     sample_dict[sample_name] = []
                     for fastq in sample_reads:
                         subsample = re.search(sample_name+r'(.*)R.*$', fastq).group(1)
-                        sample_dict[sample_name] += [subsample]
+                        if not subsample in sample_dict[sample_name]:
+                            sample_dict[sample_name] += [subsample]
                 #if there is not the right amount of input data per sample, print error and exit
                 else:
                     print (f"The sample directory {sample_dir} should contain at least two fastq files.")

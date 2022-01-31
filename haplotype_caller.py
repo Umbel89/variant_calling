@@ -91,7 +91,11 @@ def run_haplotypecaller (input_bam, sample, reference_fasta, output_dir, input_t
                 -ploidy {ploidy} -stand-call-conf {min_thr} -I {input_bam} -O {output_fn} -R {reference_fasta} \
                 --output-mode {output_mode} {intervals}'
         check_call(cmd, shell=True)
-
+    
+    #if not indexed, create index for (g)vcf files
+    if not os.path.isfile(output_fn+'.tbi'):
+        cmd = f'tabix -p vcf {output_fn}'
+        check_call(cmd, shell=True)
 
 if __name__ == '__main__':
     

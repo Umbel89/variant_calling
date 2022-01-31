@@ -111,12 +111,12 @@ def run_bwa (read_group, reference_fasta, R1, R2, sample, subsample, output_dir,
     
     if not os.path.isfile(output_fn) or not os.path.getsize(output_fn) > 0:
         #map with bwa and convert to bam and sort with samtools
-        print (f"Mapping with bwa mem for sample {sample}.")
+        print (f"Mapping with bwa mem for sample {sample}_{subsample}.")
         cmd = f'bwa-mem2 mem -M -R "{read_group}" -t {threads} {reference_fasta} {R1} {R2} \
                 | samtools sort -@ {threads} -m 4G - -o {output_fn}'
         check_call(cmd, shell=True)
     else:
-        print (f"bam file of sample {sample} already exists.")
+        print (f"bam file of sample {sample}_{subsample} already exists.")
     
     index_bam (output_fn)
 

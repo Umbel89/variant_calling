@@ -104,15 +104,15 @@ def measure_variants (sample, filtered_vcf):
 
 if __name__ == '__main__':
     
-    reference_fasta = "/net/virus/linuxhome/petros/variant_calling_Pe1/reference/Pe1_assembly.fasta"
-    input_vcf = "/net/virus/linuxhome/petros/variant_calling_Pe1/variants/pe1.vcf.gz"
-    output_dir = "/net/virus/linuxhome/petros/variant_calling_Pe1/variants/samples/"
+    reference_fasta = "/net/virus/linuxhome/petros/variant_calling/Pe14/reference/Pe14_assembly.fasta"
+    input_vcf = "/net/virus/linuxhome/petros/variant_calling/Pe14/genotyped/Pe14.vcf.gz"
+    output_dir = "/net/virus/linuxhome/petros/variant_calling/Pe14/genotyped/"
     if not os.path.exists(os.path.dirname(output_dir+'/')):
         os.makedirs(os.path.dirname(output_dir+'/'))
     #split multi vcf file into each sample
-    split_multi_vcf = True
+    split_multi_vcf = False
     #name or list of names of the output file ('all' to run for all samples in vcf file)
-    input_sample = 'all'
+    input_sample = 'Pe14'
     #filtering options
     filter_cmd = f'--filter-name "QD4" --filter-expression "QD < 4.0" \
                    --filter-name "FS60" --filter-expression "FS > 60.0" \
