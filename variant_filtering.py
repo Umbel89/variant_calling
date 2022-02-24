@@ -76,16 +76,16 @@ def remove_filtered (sample, filtered_vcf):
                 --exclude-non-variants True --exclude-filtered True --remove-unused-alternates True' #--max-indel-size 0
         check_call(cmd, shell=True)
         
-    hom_vcf = f'{output_dir}/{sample}_filtered_removed_hom.vcf.gz'
+    # ~ hom_vcf = f'{output_dir}/{sample}_filtered_removed_hom.vcf.gz'
     
-    if not os.path.isfile(hom_vcf) or not os.path.getsize(hom_vcf) > 0:
-        cmd = f'bcftools view -i \'GT="hom"\' {removed_vcf} -o {hom_vcf} -O z'
-        check_call(cmd, shell=True)
+    # ~ if not os.path.isfile(hom_vcf) or not os.path.getsize(hom_vcf) > 0:
+        # ~ cmd = f'bcftools view -i \'GT="hom"\' {removed_vcf} -o {hom_vcf} -O z'
+        # ~ check_call(cmd, shell=True)
         
-    #index bgzip vcf file
-    if not os.path.isfile(hom_vcf+'.tbi') or not os.path.getsize(hom_vcf+'.tbi') > 0:
-        cmd = f'tabix -p vcf {hom_vcf}'
-        check_call(cmd, shell=True)
+    # ~ #index bgzip vcf file
+    # ~ if not os.path.isfile(hom_vcf+'.tbi') or not os.path.getsize(hom_vcf+'.tbi') > 0:
+        # ~ cmd = f'tabix -p vcf {hom_vcf}'
+        # ~ check_call(cmd, shell=True)
     
     return removed_vcf
 
@@ -104,25 +104,25 @@ def measure_variants (sample, filtered_vcf):
 
 if __name__ == '__main__':
     
-    reference_fasta = "/net/virus/linuxhome/petros/variant_calling/Pe14/reference/Pe14_assembly.fasta"
-    input_vcf = "/net/virus/linuxhome/petros/variant_calling/Pe14/genotyped/Pe14.vcf.gz"
-    output_dir = "/net/virus/linuxhome/petros/variant_calling/Pe14/genotyped/"
+    reference_fasta = "/net/virus/linuxhome/petros/variant_calling/Pe1_mt/reference/Pe1_corr.fasta"
+    input_vcf = "/net/virus/linuxhome/petros/variant_calling/Pe1_mt/variants/Pe_mt.vcf.gz"
+    output_dir = "/net/virus/linuxhome/petros/variant_calling/Pe1_mt/variants/samples/"
     if not os.path.exists(os.path.dirname(output_dir+'/')):
         os.makedirs(os.path.dirname(output_dir+'/'))
     #split multi vcf file into each sample
-    split_multi_vcf = False
+    split_multi_vcf = True
     #name or list of names of the output file ('all' to run for all samples in vcf file)
-    input_sample = 'Pe14'
+    input_sample = 'all'
     #filtering options
     filter_cmd = f'--filter-name "QD4" --filter-expression "QD < 4.0" \
                    --filter-name "FS60" --filter-expression "FS > 60.0" \
-                   --filter-name "MQ20" --filter-expression "MQ < 20.0" \
-                   --filter-name "SOR3" --filter-expression "SOR > 3.0"\
-                   --filter-name "MQRS-3" --filter-expression "MQRankSum < -3.0" \
-                   --filter-name "ReadPosRS" --filter-expression "ReadPosRankSum < -1.0 || ReadPosRankSum > 3.5"'
+                   --filter-name "MQ20" --filter-expression "MQ < 20.0"'
+                   # ~ --filter-name "SOR3" --filter-expression "SOR > 3.0"\
+                   # ~ --filter-name "MQRS-3" --filter-expression "MQRankSum < -3.0" \
+                   # ~ --filter-name "ReadPosRS" --filter-expression "ReadPosRankSum < -1.0 || ReadPosRankSum > 3.5"'
                    
     #if input is all, parse sample list from multi vcf file
-    if input_sample == 'all':
+    if input_sample == 'all' and split_multi_vcf:
         sample_list = parse_sample_list ()
     else:
         sample_list = input_sample.split(',')
