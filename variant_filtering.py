@@ -25,38 +25,31 @@
 import sys, os, glob, subprocess
 from subprocess import check_call
 
+#filtering options
+filter_cmd = f'--filter-name "QD4" --filter-expression "QD < 4.0" \
+               --filter-name "FS60" --filter-expression "FS > 60.0" \
+               --filter-name "MQ20" --filter-expression "MQ < 20.0"'
+               # ~ --filter-name "MAF01" --filter-expression "MAF < 0.1" \
+               # ~ --filter-name "SOR3" --filter-expression "SOR > 3.0"\
+               # ~ --filter-name "MQRS-3" --filter-expression "MQRankSum < -3.0" \
+               # ~ --filter-name "ReadPosRS" --filter-expression "ReadPosRankSum < -1.0 || ReadPosRankSum > 3.5"'
 
-def parse_sample_list ():
+
+def init(input_vcf, reference_fasta, output_dir, sample):
     
-    #parse sample list from mutli vcf file
-    cmd = f'bcftools query -l {input_vcf}'
-    vcf_list = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    vcf_list = vcf_list.communicate()[0].strip().decode('UTF-8')
-
-    #make output into a list
-    sample_list = vcf_list.split('\n')
-    
-    return sample_list
-
-
-def parse_sample (sample):
-    
-    sample_vcf = f'{output_dir}/{sample}.vcf.gz'
-    
-    #parse sample from multi vcf file | remove all the lines that have no information or are identical to the reference
-    if not os.path.isfile(sample_vcf) or not os.path.getsize(sample_vcf) > 0:
-        cmd = f'bcftools view -s {sample} {input_vcf} | bcftools view -e \'GT~"\."\' - | bcftools view -e \'GT="ref"\' - -o {sample_vcf} -O z'
-        check_call(cmd, shell=True)
-        
-    #index bgzip vcf file
-    if not os.path.isfile(sample_vcf+'.tbi') or not os.path.getsize(sample_vcf+'.tbi') > 0:
-        cmd = f'tabix -p vcf {sample_vcf}'
-        check_call(cmd, shell=True)
-    
-    return sample_vcf
+    #filter sample
+    filtered_vcf = filter_vcf (sample, reference_fasta, input_vcf, output_dir)
+    #measure after filtering
+    measure_variants (f'{sample}_filtered', reference_fasta, filtered_vcf, output_dir)
+    #remove filtered and unused variants
+    removed_vcf = remove_filtered (sample, reference_fasta, filtered_vcf, output_dir)
+    #remove repetative regions
+    unique_vcf = remove_repeats (sample, reference_fasta, removed_vcf, output_dir)
+    #measure after removing repeats
+    measure_variants (f'{sample}_unique', reference_fasta, unique_vcf, output_dir)
 
 
-def filter_vcf (sample, sample_vcf):
+def filter_vcf (sample, reference_fasta, sample_vcf, output_dir):
     
     filtered_vcf = f'{output_dir}/{sample}_filtered.vcf.gz'
     
@@ -67,33 +60,53 @@ def filter_vcf (sample, sample_vcf):
     return filtered_vcf
 
 
-def remove_filtered (sample, filtered_vcf):
+def remove_filtered (sample, reference_fasta, filtered_vcf, output_dir):
     
     removed_vcf = f'{output_dir}/{sample}_filtered_removed.vcf.gz'
-    #remove lines that didn't pass the filters, unused alternative alleles, indels larger than 1
+    #remove lines that didn't pass the filters, unused alternative alleles
     if not os.path.isfile(removed_vcf) or not os.path.getsize(removed_vcf) > 0:
         cmd = f'gatk SelectVariants -R {reference_fasta} -V {filtered_vcf} -O {removed_vcf} \
-                --exclude-non-variants True --exclude-filtered True --remove-unused-alternates True' #--max-indel-size 0
+                --exclude-non-variants True --exclude-filtered True --remove-unused-alternates True' #--max-indel-size 0' 
         check_call(cmd, shell=True)
-        
-    # ~ hom_vcf = f'{output_dir}/{sample}_filtered_removed_hom.vcf.gz'
-    
-    # ~ if not os.path.isfile(hom_vcf) or not os.path.getsize(hom_vcf) > 0:
-        # ~ cmd = f'bcftools view -i \'GT="hom"\' {removed_vcf} -o {hom_vcf} -O z'
-        # ~ check_call(cmd, shell=True)
-        
-    # ~ #index bgzip vcf file
-    # ~ if not os.path.isfile(hom_vcf+'.tbi') or not os.path.getsize(hom_vcf+'.tbi') > 0:
-        # ~ cmd = f'tabix -p vcf {hom_vcf}'
-        # ~ check_call(cmd, shell=True)
     
     return removed_vcf
 
 
-def measure_variants (sample, filtered_vcf):
+def remove_repeats (sample, reference_fasta, removed_vcf, output_dir):
     
-    comp_fn = f'{output_dir}/{sample}_filtered.vchk'
-    plot_dir = f'{output_dir}/{sample}_filtered/'
+    reference = reference_fasta.split('/')[-1].split('_')[0]
+    repeat_gff = f"/net/virus/linuxhome/petros/Pe_genome_assemblies/{reference}_nanopore/final/repeats/{reference}_assembly.fasta.out.gff"
+
+    unique_vcf = f'{output_dir}/{sample}_unique.vcf'
+    #remove lines that didn't pass the filters, unused alternative alleles
+    if not os.path.isfile(unique_vcf) or not os.path.getsize(unique_vcf) > 0:
+        cmd = f'bedtools intersect -a {removed_vcf} -b {repeat_gff} -header -wa -v > {unique_vcf}'
+        check_call(cmd, shell=True)
+    
+    unique_vcf = compress_input (unique_vcf)
+    
+    return unique_vcf
+
+
+def compress_input (input_fn):
+    
+    if not input_fn.endswith('.gz'):
+        cmd = f'bgzip {input_fn}'
+        check_call(cmd, shell=True)
+        input_fn = input_fn+'.gz'
+    
+    #if not indexed, create index for vcf files
+    if not os.path.isfile(input_fn+'.tbi'):
+        cmd = f'tabix -p vcf {input_fn}'
+        check_call(cmd, shell=True)
+    
+    return input_fn
+
+
+def measure_variants (sample, reference_fasta, filtered_vcf, output_dir):
+    
+    comp_fn = f'{output_dir}/{sample}.vchk'
+    plot_dir = f'{output_dir}/{sample}/'
     
     cmd = f'bcftools stats -f .,PASS -F {reference_fasta} -s- {filtered_vcf} > {comp_fn}'
     check_call(cmd, shell=True)
@@ -104,37 +117,6 @@ def measure_variants (sample, filtered_vcf):
 
 if __name__ == '__main__':
     
-    reference_fasta = "/net/virus/linuxhome/petros/variant_calling/Pe1_mt/reference/Pe1_corr.fasta"
-    input_vcf = "/net/virus/linuxhome/petros/variant_calling/Pe1_mt/variants/Pe_mt.vcf.gz"
-    output_dir = "/net/virus/linuxhome/petros/variant_calling/Pe1_mt/variants/samples/"
-    if not os.path.exists(os.path.dirname(output_dir+'/')):
-        os.makedirs(os.path.dirname(output_dir+'/'))
-    #split multi vcf file into each sample
-    split_multi_vcf = True
-    #name or list of names of the output file ('all' to run for all samples in vcf file)
-    input_sample = 'all'
-    #filtering options
-    filter_cmd = f'--filter-name "QD4" --filter-expression "QD < 4.0" \
-                   --filter-name "FS60" --filter-expression "FS > 60.0" \
-                   --filter-name "MQ20" --filter-expression "MQ < 20.0"'
-                   # ~ --filter-name "SOR3" --filter-expression "SOR > 3.0"\
-                   # ~ --filter-name "MQRS-3" --filter-expression "MQRankSum < -3.0" \
-                   # ~ --filter-name "ReadPosRS" --filter-expression "ReadPosRankSum < -1.0 || ReadPosRankSum > 3.5"'
-                   
-    #if input is all, parse sample list from multi vcf file
-    if input_sample == 'all' and split_multi_vcf:
-        sample_list = parse_sample_list ()
-    else:
-        sample_list = input_sample.split(',')
+    sample, reference_fasta, output_dir, input_vcf = sys.argv[1:]
     
-    for i, sample in enumerate(sample_list, 1):
-        print (i, sample)
-        #if the input is multi vcf file, parse one sample
-        if split_multi_vcf:
-            sample_vcf = parse_sample (sample)
-        else:
-            sample_vcf = input_vcf
-        #filter sample
-        filtered_vcf = filter_vcf (sample, sample_vcf)
-        removed_vcf = remove_filtered (sample, filtered_vcf)
-        measure_variants (sample, filtered_vcf)
+    init(input_vcf, reference_fasta, output_dir, sample)

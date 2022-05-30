@@ -52,9 +52,11 @@ def init (sample_list, reference_fasta, output_dir, projectname, threads, input_
     output_vcf = run_genotype (database, sample_list, reference_fasta, output_dir, projectname, all_sites, intervals_fn)
     genotyping_end = time.time()
     #calculate vcf statistics
-    bcftools_stats (output_vcf, reference_fasta, output_dir, projectname)
+    bcftools_stats (output_vcf, reference_fasta, f'{output_dir}/variants/', projectname)
     
     log_time (start, genotyping_start, preprocessing, database_time, genotyping_end)
+    
+    return output_vcf
 
 
 def check_input (sample_list, input_list, output_dir):
@@ -172,8 +174,8 @@ def run_genotype (database, sample_list, reference_fasta, output_dir, projectnam
 
 def bcftools_stats (output_vcf, reference_fasta, output_dir, projectname):
     
-    comp_fn = f'/{output_dir}/variants/{projectname}.vchk'
-    plot_dir = f'/{output_dir}/variants/{projectname}/'
+    comp_fn = f'/{output_dir}/{projectname}.vchk'
+    plot_dir = f'/{output_dir}/{projectname}/'
     
     if not os.path.isfile(comp_fn):
         cmd = f'bcftools stats -F {reference_fasta} -s- {output_vcf} > {comp_fn}'
@@ -203,4 +205,4 @@ if __name__ == '__main__':
     #import directories and project name
     sample_list, reference_fasta, output_dir, projectname = sys.argv[1:]
     
-    init (list(sample_list.split(',')), reference_fasta, output_dir, projectname, threads, input_intervals, all_sites)
+    output_vcf = init (list(sample_list.split(',')), reference_fasta, output_dir, projectname, threads, input_intervals, all_sites)

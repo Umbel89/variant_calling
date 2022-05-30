@@ -30,7 +30,7 @@ from shutil import copy2
 #import python scripts from the directory of the current script
 sdir = f'{os.path.dirname(os.path.realpath(__file__))}/'
 sys.path.append('sdir')
-import bwa_mapping, mark_duplicates, haplotype_caller, joint_genotyping, kmer_plots
+import bwa_mapping, mark_duplicates, haplotype_caller, joint_genotyping, kmer_plots, variant_filtering
 
 
 def init (reference_fasta, output_dir, threads, projectname):
@@ -122,12 +122,15 @@ def parse_sample_list (input_samples):
     """Check if input is a file, then parse each line of the file and 
     return it into a list.
     """
-    sample_list = []
     
-    with open (input_samples) as the_file:
-        for line in the_file:
-            sample_name = line.strip()
-            sample_list.append(sample_name)
+    if not os.path.isfile(input_samples):
+        sample_list = input_samples.split(',')
+    else:
+        sample_list = []
+        with open (input_samples) as the_file:
+            for line in the_file:
+                sample_name = line.strip()
+                sample_list.append(sample_name)
     
     return sample_list
 
@@ -188,6 +191,17 @@ def create_switches (steps):
     return switches
 
 
+def sample_stats (args, sample_list, reference_fasta):
+    
+    #for every sample in sample list
+    for sample in sample_list:
+        output_vcf = f'{args.output}/genotyped/{sample}.vcf.gz'
+        #calculate vcf statistics with bcftools
+        joint_genotyping.bcftools_stats (output_vcf, reference_fasta, f'{args.output}/genotyped/', args.projectname)
+        #filter vcf
+        variant_filtering.init (output_vcf, reference_fasta, f'{args.output}/genotyped/', args.projectname)
+
+
 def setting ():
     """Create options."""
     
@@ -212,7 +226,7 @@ def setting ():
     #optional arguments
     parser.add_argument('-f', '--readfn', default=def_readfn, help= f"Extension of sample reads filename. [default= {def_readfn}]", type=str, metavar="STR")
     parser.add_argument('-p', '--ploidy', default=def_ploidy, help=f"Ploidy of the samples. [default={def_ploidy}]", type=int, metavar="INT")
-    parser.add_argument('-e', '--sample_list', default=def_intervals, help="A file with a list of sample names, one per line. Only the sample names in this file will be used for variant calling.", type=inFile, metavar="FILE")
+    parser.add_argument('-e', '--sample_list', default=def_intervals, help="A file or a comma seperated list of sample names, one per line. Only the sample names in this file will be used for variant calling.", type=str, metavar="STR")
     parser.add_argument('-i', '--input', default=options_input[0], help=f"Type of Input Data. [default={options_input[0]}]", choices=options_input)
     parser.add_argument('-g', '--genotyping', default=options_genotyping[0], choices=options_genotyping, help=f"Type of Genotyping. [default={options_genotyping[0]}]")
     parser.add_argument('-a', '--all_sites', action='store_true', help="The output vcf from joint genotyping includes variant and invariant sites.")
@@ -255,5 +269,10 @@ if __name__ == '__main__':
     #run variant calling
     if haplotyper:
         haplotype_caller.init (sample_list, reference_fasta, args.output, args.input, args.genotyping, args.ploidy, args.parallelise, args.intervals, args.all_sites)
+    #joint genotyping mode
     if args.genotyping == 'joint' and genotyping:
-        joint_genotyping.init (sample_list, reference_fasta, args.output, args.projectname, args.threads, args.intervals, args.all_sites, args.memory)
+        output_vcf = joint_genotyping.init (sample_list, reference_fasta, args.output, args.projectname, args.threads, args.intervals, args.all_sites, args.memory)
+        variant_filtering.init (output_vcf, reference_fasta, f'{args.output}/variants/', args.projectname)
+    #or calculate statistics for each sample
+    else:
+        sample_stats (args, sample_list, reference_fasta)
