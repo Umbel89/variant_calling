@@ -260,7 +260,7 @@ if __name__ == '__main__':
     
     #fastq k-mer analysis
     if k_mers:
-        kmer_plots.init (sample_list, args.samples, args.readsfn, args.output, args.ploidy, args.ncpus)
+        kmer_plots.init (sample_list, args.samples, args.readfn, args.output, args.ploidy, args.ncpus)
     #run mapping
     if mapping:
         bwa_mapping.init (sample_dict, args.samples, args.output, reference_fasta, args.threads, args.projectname, args.genotyping, args.readfn)
@@ -274,5 +274,5 @@ if __name__ == '__main__':
         output_vcf = joint_genotyping.init (sample_list, reference_fasta, args.output, args.projectname, args.threads, args.intervals, args.all_sites, args.memory)
         variant_filtering.init (output_vcf, reference_fasta, f'{args.output}/variants/', args.projectname)
     #or calculate statistics for each sample
-    else:
+    elif haplotyper:
         sample_stats (args, sample_list, reference_fasta)
