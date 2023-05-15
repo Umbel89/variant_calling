@@ -24,7 +24,6 @@
 
 import sys, os, glob, re
 import time, datetime, logging, subprocess
-from subprocess import check_call
 
 
 def init (sample_list, reference_fasta, output_dir, projectname, threads, input_intervals, all_sites, memory):
@@ -83,7 +82,7 @@ def index_gvcf (input_gvcf):
     if not os.path.isfile(input_gvcf+'.tbi'):
         print (f"Creating gvcf index for sample {sample}")
         cmd = f'tabix -p vcf {input_gvcf}'
-        check_call(cmd, shell=True)
+        subprocess.run(cmd, shell=True, check=True)
 
 
 def create_intervals (reference_fasta, output_dir):
@@ -134,7 +133,7 @@ def run_dbimport (intervals_fn, sample_list, output_dir, threads, input_interval
                 -L {intervals_fn} --tmp-dir {output_dir}/variants/ \
                 --genomicsdb-workspace-path {workspace_dir} --batch-size 70 \
                 --seconds-between-progress-updates 120 --reader-threads {threads} {merge_intervals}'
-        check_call(cmd, shell=True)
+        subprocess.run(cmd, shell=True, check=True)
     
     return workspace_dir
 
@@ -154,7 +153,7 @@ def run_genotype (database, sample_list, reference_fasta, output_dir, projectnam
         cmd = f'gatk --java-options "-Xmx32g -Djava.io.tmpdir={output_dir}/variants/" GenotypeGVCFs -V gendb://{database} \
                 -R {reference_fasta} -O {output_vcf} --tmp-dir {output_dir}/variants/ -L {intervals_fn}\
                 -G StandardAnnotation --seconds-between-progress-updates 120 {vcf_type}'
-        check_call(cmd, shell=True)
+        subprocess.run(cmd, shell=True, check=True)
     else:
         print (f"vcf file for project {projectname} already exists.")
     
@@ -179,11 +178,11 @@ def bcftools_stats (output_vcf, reference_fasta, output_dir, projectname):
     
     if not os.path.isfile(comp_fn):
         cmd = f'bcftools stats -F {reference_fasta} -s- {output_vcf} > {comp_fn}'
-        check_call(cmd, shell=True)
+        subprocess.run(cmd, shell=True, check=True)
     
     if not os.path.exists(os.path.dirname(plot_dir+'/')):
         cmd = f'plot-vcfstats -p {plot_dir} -s {comp_fn}'
-        check_call(cmd, shell=True)
+        subprocess.run(cmd, shell=True, check=True)
 
 
 def log_time (start, genotyping_start, preprocessing, database_time, genotyping_end):

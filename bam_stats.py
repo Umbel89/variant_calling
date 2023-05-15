@@ -23,7 +23,7 @@
 #  
 
 import glob, os
-from subprocess import check_call
+import subprocess
 
 
 def parse_sample_list ():
@@ -46,10 +46,10 @@ def samtools_stats (bam_file, sample):
     
     if not os.path.isfile(f'{output_fn}_stats.txt'):
         cmd = f'samtools stats -@ 16 -d {bam_file} > {output_fn}_stats.txt'
-        check_call(cmd, shell=True)
+        subprocess.run(cmd, shell=True, check=True)
         
         cmd = f'plot-bamstats -p {output_fn}/ {output_fn}_stats.txt'
-        check_call(cmd, shell=True)
+        subprocess.run(cmd, shell=True, check=True)
 
 
 if __name__ == '__main__':

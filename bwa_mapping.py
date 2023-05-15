@@ -24,7 +24,8 @@
 
 import glob, sys, os
 import time, datetime, logging
-from subprocess import check_call, Popen, PIPE, STDOUT
+import subprocess
+from subprocess import Popen, PIPE, STDOUT
 
 start = time.time()
 
@@ -94,14 +95,14 @@ def index_fasta (reference_fasta):
     if not os.path.isfile(reference_fasta+'.pac') or not os.path.getsize(reference_fasta+'.pac') > 0:
         print ("Indexing reference with bwa.")
         cmd = f'bwa-mem2 index {reference_fasta}' 
-        check_call(cmd, shell=True)
+        subprocess.run(cmd, shell=True, check=True)
         
         index_time = datetime.timedelta(seconds=round(time.time() - start))
         logging.info (f'Indexing Time: {index_time}')
     
     if not os.path.isfile(reference_fasta+'.fai') or not os.path.getsize(reference_fasta+'.fai') > 0:
         cmd = f'samtools faidx {reference_fasta}'
-        check_call(cmd, shell=True)
+        subprocess.run(cmd, shell=True, check=True)
 
 
 def run_bwa (read_group, reference_fasta, R1, R2, sample, subsample, output_dir, threads):
@@ -114,7 +115,7 @@ def run_bwa (read_group, reference_fasta, R1, R2, sample, subsample, output_dir,
         print (f"Mapping with bwa mem for sample {sample}_{subsample}.")
         cmd = f'bwa-mem2 mem -M -R "{read_group}" -t {threads} {reference_fasta} {R1} {R2} \
                 | samtools sort -@ {threads} -m 4G - -o {output_fn}'
-        check_call(cmd, shell=True)
+        subprocess.run(cmd, shell=True, check=True)
     else:
         print (f"bam file of sample {sample}_{subsample} already exists.")
     
@@ -125,7 +126,7 @@ def index_bam (bam_file):
     
     if not os.path.isfile(f'{bam_file}.bai'):
         cmd = f'samtools index -@ 4 -b {bam_file}'
-        check_call(cmd, shell=True)
+        subprocess.run(cmd, shell=True, check=True)
 
 
 def log_time (sample, sample_start, mapping):

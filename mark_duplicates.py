@@ -24,7 +24,7 @@
 
 import glob, os, sys
 import numpy as np
-from subprocess import check_call
+import subprocess
 from multiprocessing import Process
 
 
@@ -76,11 +76,11 @@ def mark_duplicates (sample, input_list, output_dir):
         # ~ cmd = f'gatk MergeSamFiles{input_cmd} -O {filtered_bam} -AS'
         cmd = f'gatk MarkDuplicates{input_cmd} -O {filtered_bam} -M {filtered_bam}-metrics.txt -AS\
                 --REMOVE_DUPLICATES true --VERBOSITY ERROR --CREATE_INDEX true --TMP_DIR {output_dir}'
-        check_call(cmd, shell=True)
+        subprocess.run(cmd, shell=True, check=True)
     
     if not os.path.isfile(filtered_bam+'.bai'):
         cmd = f'samtools index -@ 4 -b {filtered_bam}'
-        check_call(cmd, shell=True)
+        subprocess.run(cmd, shell=True, check=True)
         
     return filtered_bam
 
@@ -91,10 +91,10 @@ def samtools_stats (sample, bam_file, output_dir, threads):
     
     if not os.path.isfile(f'{output_fn}_stats.txt'):
         cmd = f'samtools stats -@ {threads} -d {bam_file} > {output_fn}_stats.txt'
-        check_call(cmd, shell=True)
+        subprocess.run(cmd, shell=True, check=True)
         
         cmd = f'plot-bamstats -p {output_fn}/ {output_fn}_stats.txt'
-        check_call(cmd, shell=True)
+        subprocess.run(cmd, shell=True, check=True)
 
 
 if __name__ == '__main__':

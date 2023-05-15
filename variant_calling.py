@@ -23,8 +23,7 @@
 #  
 
 import numpy as np
-import argparse, os, subprocess, re, logging, sys, time, datetime
-from multiprocessing import Process
+import argparse, os, re, logging, sys, time, datetime
 from shutil import copy2
 
 #import python scripts from the directory of the current script

@@ -24,7 +24,7 @@
 
 import glob, sys, os
 import numpy as np
-from subprocess import check_call
+import subprocess
 from multiprocessing import Process
 
 
@@ -58,7 +58,7 @@ def reference_dictionary (reference_fasta):
     reference_dict = '.'.join(reference_fasta.split('.')[:-1])+'.dict'
     if not os.path.isfile(reference_dict):
         cmd = f'gatk CreateSequenceDictionary -R {reference_fasta} -O {reference_dict}'
-        check_call(cmd, shell=True)
+        subprocess.run(cmd, shell=True, check=True)
 
 
 def run_haplotypecaller (input_bam, sample, reference_fasta, output_dir, input_type, genotyping, ploidy, input_intervals, all_sites):
@@ -90,12 +90,12 @@ def run_haplotypecaller (input_bam, sample, reference_fasta, output_dir, input_t
                 --verbosity ERROR -VS LENIENT --native-pair-hmm-threads 8 \
                 -ploidy {ploidy} -stand-call-conf {min_thr} -I {input_bam} -O {output_fn} -R {reference_fasta} \
                 --output-mode {output_mode} {intervals}'
-        check_call(cmd, shell=True)
+        subprocess.run(cmd, shell=True, check=True)
     
     #if not indexed, create index for (g)vcf files
     if not os.path.isfile(output_fn+'.tbi'):
         cmd = f'tabix -p vcf {output_fn}'
-        check_call(cmd, shell=True)
+        subprocess.run(cmd, shell=True, check=True)
 
 if __name__ == '__main__':
     
