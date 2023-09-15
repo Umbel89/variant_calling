@@ -22,7 +22,7 @@
 #  
 #  
 
-import glob, os, sys
+import os, sys
 import numpy as np
 import subprocess
 from multiprocessing import Process
@@ -53,7 +53,7 @@ def filter_bam (sample_list, sample_dict, output_dir, threads):
         for subsample in subsample_list:
             sample_join = ''.join([sample, subsample[:-1]])
             input_bam = f'{output_dir}/mapped/{sample_join}.bam'
-        input_list.append(input_bam)
+            input_list.append(input_bam)
         #mark duplicates
         filtered_bam = mark_duplicates (sample, input_list, output_dir)
         #bam stats
