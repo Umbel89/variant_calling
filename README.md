@@ -9,4 +9,4 @@ Variant calling pipeline for short-read sequences using a single reference genom
 python variant_calling.py --help
 
 ## Cite
-[Skiadas, P. et al. (2022), Environmental Microbiology: Sexual reproduction contributes to the evolution of resistance-breaking isolates of the spinach pathogen *Peronospora effusa*](https://enviromicro-journals-onlinelibrary-wiley-com.proxy.library.uu.nl/doi/10.1111/1462-2920.15944)
+[Skiadas, P. *et al*. (2022), Environmental Microbiology: Sexual reproduction contributes to the evolution of resistance-breaking isolates of the spinach pathogen *Peronospora effusa*](https://enviromicro-journals-onlinelibrary-wiley-com.proxy.library.uu.nl/doi/10.1111/1462-2920.15944)
