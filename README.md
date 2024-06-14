@@ -19,8 +19,9 @@ usage: variant_calling.py [-h] -r FILE -s STR -o STR -n STR [-f STR] [-p INT] [-
 
 Run the mapping and variant calling pipeline.
 
-optional arguments:
   -h, --help            show this help message and exit
+
+required arguments:
   -r FILE, --reference FILE
                         Reference fasta file.
   -s STR, --samples STR
@@ -29,6 +30,8 @@ optional arguments:
   -n STR, --projectname STR
                         Name of the Project. Can contain only lowercase or upercase letters, numeric characters, and
                         dashes (-). Maximum length: 38 characters
+
+optional arguments:
   -f STR, --readfn STR  Extension of sample reads filename. [default= _filtered_rmMin30G.fastq.gz]
   -p INT, --ploidy INT  Ploidy of the samples. [default=2]
   -e STR, --sample_list STR
