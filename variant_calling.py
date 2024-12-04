@@ -225,7 +225,7 @@ def setting ():
     #optional arguments
     parser.add_argument('-f', '--readfn', default=def_readfn, help= f"Extension of sample reads filename. [default= {def_readfn}]", type=str, metavar="STR")
     parser.add_argument('-p', '--ploidy', default=def_ploidy, help=f"Ploidy of the samples. [default={def_ploidy}]", type=int, metavar="INT")
-    parser.add_argument('-e', '--sample_list', default=def_intervals, help="A file or a comma seperated list of sample names, one per line. Only the sample names in this file will be used for variant calling.", type=str, metavar="STR")
+    parser.add_argument('-e', '--sample_list', default=def_sample_list, help="A file or a comma seperated list of sample names, one per line. Only the sample names in this file will be used for variant calling.", type=str, metavar="STR")
     parser.add_argument('-i', '--input', default=options_input[0], help=f"Type of Input Data. [default={options_input[0]}]", choices=options_input)
     parser.add_argument('-g', '--genotyping', default=options_genotyping[0], choices=options_genotyping, help=f"Type of Genotyping. [default={options_genotyping[0]}]")
     parser.add_argument('-a', '--all_sites', action='store_true', help="The output vcf from joint genotyping includes variant and invariant sites.")
